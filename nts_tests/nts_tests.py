@@ -87,6 +87,9 @@ def udp_peer():
                 data, reply_peer = sock.recvfrom(1024, socket.MSG_DONTWAIT)
                 assert data == MSG_PEER_HELLO
                 print 'peer %s: received "%s" from %s' % (public_address, data, reply_peer)
+                # reply to the port that we got a packet from, if it is the same host
+                if reply_peer[0] == peer[0]:
+                    peer = reply_peer
         except socket.error as e:
             if e.errno != errno.EAGAIN:
                 raise
