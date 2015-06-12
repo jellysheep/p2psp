@@ -94,17 +94,11 @@ def udp_peer():
     sock.close()
 
 def print_usage_exit():
-    print 'Usage: %s <splitter | peer | standalone>' % sys.argv[0]
+    print 'Usage: %s <splitter | peer> <splitter_ip> <splitter_port>' % sys.argv[0]
+    print '   or: %s standalone' % sys.argv[0]
     sys.exit(1)
 
-if len(sys.argv) < 2:
-    print_usage_exit()
-
-if sys.argv[1] == 'splitter':
-    udp_splitter()
-elif sys.argv[1] == 'peer':
-    udp_peer()
-elif sys.argv[1] == 'standalone':
+if len(sys.argv) == 2 and sys.argv[1] == 'standalone':
     splitter_thread = threading.Thread(target=udp_splitter)
     splitter_thread.start()
     peer_threads = [threading.Thread(target=udp_peer), threading.Thread(target=udp_peer)]
@@ -116,4 +110,15 @@ elif sys.argv[1] == 'standalone':
         thread.join()
     splitter_thread.join()
 else:
-    print_usage_exit()
+    if len(sys.argv) != 4:
+        print_usage_exit()
+
+    SPLITTER_ADDRESS = sys.argv[2]
+    SPLITTER_PORT = int(sys.argv[3])
+
+    if sys.argv[1] == 'splitter':
+        udp_splitter()
+    elif sys.argv[1] == 'peer':
+        udp_peer()
+    else:
+        print_usage_exit()
