@@ -3,6 +3,7 @@ import socket
 import struct
 import threading
 import time
+import sys
 
 import ipaddress
 
@@ -35,8 +36,7 @@ def udp_splitter():
     while running:
         try:
             data, new_peer = sock.recvfrom(1024, socket.MSG_DONTWAIT)
-            if data != MSG_PEER_HELLO:
-                continue
+            assert data == MSG_PEER_HELLO
             # print 'received peer message "%s" from %s' % (data, addr)
             if new_peer not in peers:
                 print 'splitter: new peer %s' % (new_peer,)
@@ -77,22 +77,43 @@ def udp_peer():
     peer = string_to_address(data[len(MSG_SPLITTER_NEW_PEER):])
     print 'peer %s: new peer %s' % (public_address, peer)
 
-    time.sleep(0.5)
-    # connect to peer
-    sock.sendto(MSG_PEER_HELLO, peer)
-    data, reply_peer = sock.recvfrom(1024)
-    print 'peer %s: received "%s" from %s' % (public_address, data, reply_peer)
+    while running:
+        time.sleep(1)
+        # send message to peer
+        sock.sendto(MSG_PEER_HELLO, peer)
+        # receive messages
+        try:
+            while True:
+                data, reply_peer = sock.recvfrom(1024, socket.MSG_DONTWAIT)
+                assert data == MSG_PEER_HELLO
+                print 'peer %s: received "%s" from %s' % (public_address, data, reply_peer)
+        except socket.error as e:
+            if e.errno != errno.EAGAIN:
+                raise
 
     sock.close()
 
+def print_usage_exit():
+    print 'Usage: %s <splitter | peer | standalone>' % sys.argv[0]
+    sys.exit(1)
 
-splitter_thread = threading.Thread(target=udp_splitter)
-splitter_thread.start()
-peer_threads = [threading.Thread(target=udp_peer), threading.Thread(target=udp_peer)]
-for thread in peer_threads:
-    thread.start()
+if len(sys.argv) < 2:
+    print_usage_exit()
 
-for thread in peer_threads:
-    thread.join()
-running = False
-splitter_thread.join()
+if sys.argv[1] == 'splitter':
+    udp_splitter()
+elif sys.argv[1] == 'peer':
+    udp_peer()
+elif sys.argv[1] == 'standalone':
+    splitter_thread = threading.Thread(target=udp_splitter)
+    splitter_thread.start()
+    peer_threads = [threading.Thread(target=udp_peer), threading.Thread(target=udp_peer)]
+    for thread in peer_threads:
+        thread.start()
+    time.sleep(5)
+    running = False
+    for thread in peer_threads:
+        thread.join()
+    splitter_thread.join()
+else:
+    print_usage_exit()
