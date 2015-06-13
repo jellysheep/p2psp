@@ -10,22 +10,22 @@ import ipaddress
 SPLITTER_ADDRESS = '127.0.0.1'
 SPLITTER_PORT = 8080
 
-MSG_PEER_HELLO = 'hello from peer'
+MSG_PEER_HELLO = 'hello from peer:'
 MSG_SPLITTER_HELLO = 'hello from splitter'
 MSG_SPLITTER_SEND_ADDR = 'public address:'
 MSG_SPLITTER_NEW_PEER = 'new peer:'
-MSG_PACK = '4si'
+MSG_PACK = '4s2i'
 
 running = True
 
 
 def address_to_string(addr):
-    return struct.pack(MSG_PACK, ipaddress.ip_address(unicode(addr[0])).packed, addr[1])
+    return struct.pack(MSG_PACK, ipaddress.ip_address(unicode(addr[0])).packed, addr[1], addr[2])
 
 
 def string_to_address(string):
     data = struct.unpack(MSG_PACK, string)
-    return (str(ipaddress.ip_address(data[0]).exploded), data[1])
+    return (str(ipaddress.ip_address(data[0]).exploded), data[1], data[2])
 
 
 def udp_splitter():
@@ -36,16 +36,20 @@ def udp_splitter():
     while running:
         try:
             data, new_peer = sock.recvfrom(1024, socket.MSG_DONTWAIT)
-            assert data == MSG_PEER_HELLO
-            # print 'received peer message "%s" from %s' % (data, addr)
+            assert data.startswith(MSG_PEER_HELLO)
+            if len(data) == len(MSG_PEER_HELLO):
+                continue
+            port = int(data[len(MSG_PEER_HELLO):])
+            new_peer = (new_peer[0], new_peer[1], port)
             if new_peer not in peers:
                 print 'splitter: new peer %s' % (new_peer,)
-                sock.sendto(MSG_SPLITTER_HELLO, new_peer)
+                sock.sendto(MSG_SPLITTER_HELLO, (new_peer[0], new_peer[1]))
                 new_peer_addr = address_to_string(new_peer)
-                sock.sendto("%s%s" % (MSG_SPLITTER_SEND_ADDR, new_peer_addr), new_peer)
+                sock.sendto("%s%s" % (MSG_SPLITTER_SEND_ADDR, new_peer_addr), (new_peer[0], new_peer[1]))
                 for old_peer in peers:
-                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, address_to_string(old_peer)), new_peer)
-                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, new_peer_addr), old_peer)
+                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, address_to_string(old_peer)),
+                                (new_peer[0], new_peer[1]))
+                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, new_peer_addr), (old_peer[0], old_peer[1]))
                 peers.append(new_peer)
         except socket.error as e:
             if e.errno == errno.EAGAIN:
@@ -64,6 +68,7 @@ def udp_peer():
     sock.sendto(MSG_PEER_HELLO, (SPLITTER_ADDRESS, SPLITTER_PORT))
     source_port = sock.getsockname()[1]
     print 'peer: sent to splitter from port %i' % source_port
+    sock.sendto('%s%i' % (MSG_PEER_HELLO, source_port), (SPLITTER_ADDRESS, SPLITTER_PORT))
     data = sock.recv(1024)
     assert data == MSG_SPLITTER_HELLO
 
@@ -79,10 +84,13 @@ def udp_peer():
     peer = string_to_address(data[len(MSG_SPLITTER_NEW_PEER):])
     print 'peer %s: new peer %s' % (public_address, peer)
 
+    i = 0
     while running:
         time.sleep(1)
         # send message to peer
-        sock.sendto(MSG_PEER_HELLO, peer)
+        i += 1
+        port = peer[1 + (i % 2)]
+        sock.sendto('%s to port %i' % (MSG_PEER_HELLO, port), (peer[0], port))
         new_source_port = sock.getsockname()[1]
         if new_source_port != source_port:
             print 'peer: sent to peer from port %i' % new_source_port
@@ -91,21 +99,23 @@ def udp_peer():
         try:
             while True:
                 data, reply_peer = sock.recvfrom(1024, socket.MSG_DONTWAIT)
-                assert data == MSG_PEER_HELLO
+                assert data.startswith(MSG_PEER_HELLO)
                 print 'peer %s: received "%s" from %s' % (public_address, data, reply_peer)
                 # reply to the port that we got a packet from, if it is the same host
                 if reply_peer[0] == peer[0]:
-                    peer = reply_peer
+                    peer = (reply_peer[0], reply_peer[1], peer[2])
         except socket.error as e:
             if e.errno != errno.EAGAIN:
                 raise
 
     sock.close()
 
+
 def print_usage_exit():
     print 'Usage: %s <splitter | peer> <splitter_ip> <splitter_port>' % sys.argv[0]
     print '   or: %s standalone' % sys.argv[0]
     sys.exit(1)
+
 
 if len(sys.argv) == 2 and sys.argv[1] == 'standalone':
     splitter_thread = threading.Thread(target=udp_splitter)
