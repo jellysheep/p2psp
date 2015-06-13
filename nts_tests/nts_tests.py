@@ -62,6 +62,8 @@ def udp_peer():
     # connect to splitter
     time.sleep(0.5)  # wait for splitter to start
     sock.sendto(MSG_PEER_HELLO, (SPLITTER_ADDRESS, SPLITTER_PORT))
+    source_port = sock.getsockname()[1]
+    print 'peer: sent to splitter from port %i' % source_port
     data = sock.recv(1024)
     assert data == MSG_SPLITTER_HELLO
 
@@ -81,6 +83,10 @@ def udp_peer():
         time.sleep(1)
         # send message to peer
         sock.sendto(MSG_PEER_HELLO, peer)
+        new_source_port = sock.getsockname()[1]
+        if new_source_port != source_port:
+            print 'peer: sent to peer from port %i' % new_source_port
+            source_port = new_source_port
         # receive messages
         try:
             while True:
