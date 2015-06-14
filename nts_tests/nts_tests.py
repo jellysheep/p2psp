@@ -28,6 +28,10 @@ def string_to_address(string):
     return (str(ipaddress.ip_address(data[0]).exploded), data[1], data[2])
 
 
+def peer_to_str(peer):
+    return '(public addr %s:%i, src port %i)' % peer
+
+
 def udp_splitter():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((SPLITTER_ADDRESS, SPLITTER_PORT))
@@ -42,14 +46,13 @@ def udp_splitter():
             port = int(data[len(MSG_PEER_HELLO):])
             new_peer = (new_peer[0], new_peer[1], port)
             if new_peer not in peers:
-                print 'splitter: new peer %s' % (new_peer,)
-                sock.sendto(MSG_SPLITTER_HELLO, (new_peer[0], new_peer[1]))
+                print 'splitter: new peer %s' % peer_to_str(new_peer)
+                sock.sendto(MSG_SPLITTER_HELLO, new_peer[0:2])
                 new_peer_addr = address_to_string(new_peer)
-                sock.sendto("%s%s" % (MSG_SPLITTER_SEND_ADDR, new_peer_addr), (new_peer[0], new_peer[1]))
+                sock.sendto("%s%s" % (MSG_SPLITTER_SEND_ADDR, new_peer_addr), new_peer[0:2])
                 for old_peer in peers:
-                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, address_to_string(old_peer)),
-                                (new_peer[0], new_peer[1]))
-                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, new_peer_addr), (old_peer[0], old_peer[1]))
+                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, address_to_string(old_peer)), new_peer[0:2])
+                    sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, new_peer_addr), old_peer[0:2])
                 peers.append(new_peer)
         except socket.error as e:
             if e.errno == errno.EAGAIN:
@@ -76,13 +79,13 @@ def udp_peer():
     data = sock.recv(1024)
     assert data.startswith(MSG_SPLITTER_SEND_ADDR)
     public_address = string_to_address(data[len(MSG_SPLITTER_SEND_ADDR):])
-    print 'peer: got public address %s' % (public_address,)
+    print 'peer: got public address %s:%i' % public_address[0:2]
 
     # receive other peer's address
     data = sock.recv(1024)
     assert data.startswith(MSG_SPLITTER_NEW_PEER)
     peer = string_to_address(data[len(MSG_SPLITTER_NEW_PEER):])
-    print 'peer %s: new peer %s' % (public_address, peer)
+    print 'peer %s: new peer %s' % (public_address, peer_to_str(peer))
 
     i = 0
     while running:
@@ -100,7 +103,7 @@ def udp_peer():
             while True:
                 data, reply_peer = sock.recvfrom(1024, socket.MSG_DONTWAIT)
                 assert data.startswith(MSG_PEER_HELLO)
-                print 'peer %s: received "%s" from %s' % (public_address, data, reply_peer)
+                print 'peer %s: received "%s" from %s' % (peer_to_str(public_address), data, reply_peer)
                 # reply to the port that we got a packet from, if it is the same host
                 if reply_peer[0] == peer[0]:
                     peer = (reply_peer[0], reply_peer[1], peer[2])
