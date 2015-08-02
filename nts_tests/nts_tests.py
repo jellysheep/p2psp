@@ -41,8 +41,10 @@ def udp_splitter():
             if new_peer not in peers:
                 print 'splitter: new peer %s' % (new_peer,)
                 sock.sendto(MSG_SPLITTER_HELLO, new_peer)
+                time.sleep(0.2)
                 new_peer_addr = address_to_string(new_peer)
                 sock.sendto("%s%s" % (MSG_SPLITTER_SEND_ADDR, new_peer_addr), new_peer)
+                time.sleep(0.2)
                 for old_peer in peers:
                     sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, address_to_string(old_peer)), new_peer)
                     sock.sendto("%s%s" % (MSG_SPLITTER_NEW_PEER, new_peer_addr), old_peer)
