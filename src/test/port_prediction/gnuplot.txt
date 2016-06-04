@@ -1,0 +1,48 @@
+
+#~ set term pdf enhanced font "Times,30" size 8.5,6
+set term pngcairo enhanced font "Times,20" size 800,600
+
+set key right top
+set grid xtics ytics
+set style line 1 lc rgb "black" lw 1
+set style line 2 lc rgb "red" lw 1
+set style line 3 lc rgb "blue" lw 1
+set style line 4 lc rgb "green" lw 1
+set style line 5 lc rgb "orange" lw 1
+set style line 6 lc rgb "purple" lw 1
+set style fill solid
+
+set boxwidth 0.05
+
+set key left top # height 2
+set style fill transparent solid 0.2
+
+set ylabel "Port prediction success rate"
+set xlabel "Number of guessed source ports"
+#set xtics 1
+#set ytics 0.2
+set xrange [1:10];
+set yrange [0:1];
+
+set boxwidth 0.01
+
+#max(x) = 5+3*(x/937)
+f1(x) = 1-a1*exp(b1*x)
+fit f1(x) 'results_1_monitor.txt' using 1:2 via a1,b1
+f2(x) = 1-a2*exp(b2*x)
+fit f2(x) 'results_2_monitors.txt' using 1:2 via a2,b2
+
+#~ set ytics 0.1
+
+#Zenbook UX303UB power usage
+
+set out "plot.png"
+plot \
+    'results_1_monitor.txt' using 1:2 ls 3 title "1 monitor", \
+    'results_2_monitors.txt' using 1:2 ls 2 title "2 monitors", \
+    f1(x) ls 3 title "Fit 1-a*e^{bx} (1 monitor)", \
+    f2(x) ls 2 title "Fit 1-a*e^{bx} (2 monitors)", \
+    f2(x)/f1(x)-1 ls 6 title "Relative success rate improvement"
+    #max(x*9.37) ls 2 title "Cutoff"
+    #~ f1(x) ls 4 title "Fit (GPU on)",
+    #'power.txt' using 3:1:2 ls 2 with yerrorbar title "Data points",
