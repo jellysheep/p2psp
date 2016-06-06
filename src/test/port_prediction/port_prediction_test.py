@@ -16,18 +16,19 @@ def get_divisors(n):
 def count_product_combinations(factors):
     return reduce(lambda a, b: a + b, factors)
 
-def get_guessed_ports(max_predicted_ports, peer_number, max_port_step, splitter_port):
+def get_guessed_ports(max_predicted_ports, peer_number, max_port_step, splitter_port, prediction_method):
     divisors = get_divisors(max_port_step)
     num_combinations = count_product_combinations(divisors)
     count_factor = max_predicted_ports/float(num_combinations)
-    return sorted(set(reduce(list.__add__, (list(
-        splitter_port + (peer_number + skips) * port_step
-        for skips in range(int(ceil(max_port_step/port_step*count_factor))))
-        for port_step in divisors))))[:max_predicted_ports]
-    #~ return sorted(set(reduce(list.__add__, (list(
-        #~ splitter_port + (peer_number + skips) * port_step
-        #~ for skips in range(max_predicted_ports))
-        #~ for port_step in [1]))))[:max_predicted_ports]
+    if prediction_method == 1: # simple method
+        return sorted(set(list(
+            splitter_port + (peer_number + skips) * 1
+            for skips in range(max_predicted_ports))))[:max_predicted_ports]
+    else: # default, advanced method
+        return sorted(set(reduce(list.__add__, (list(
+            splitter_port + (peer_number + skips) * port_step
+            for skips in range(int(ceil(max_port_step/port_step*count_factor))))
+            for port_step in divisors))))[:max_predicted_ports]
 
 def update_port_step(probable_port_step, source_port1, source_port2):
     # Skip check if measured port step is 0
@@ -40,7 +41,7 @@ def update_port_step(probable_port_step, source_port1, source_port2):
     probable_port_step = gcd(probable_port_step, port_diff)
     return probable_port_step
 
-def testrun(max_predicted_ports, port_step, num_monitors, num_peers, skip_likeliness_monitor, skip_likeliness_peer):
+def testrun(max_predicted_ports, port_step, num_monitors, num_peers, skip_likeliness_monitor, skip_likeliness_peer, prediction_method):
     src_port_to_splitter = 1000
 
     # Port prediction at peer 1:
@@ -66,17 +67,18 @@ def testrun(max_predicted_ports, port_step, num_monitors, num_peers, skip_likeli
     #~ probable_src_ports = get_guessed_ports(max_predicted_ports, peer_number, probable_port_step, src_port_to_splitter)
     peer_number = 1
     if num_monitors > 1:
-        probable_src_ports = get_guessed_ports(max_predicted_ports, peer_number, probable_port_step, last_src_port)
+        probable_src_ports = get_guessed_ports(max_predicted_ports, peer_number, probable_port_step, last_src_port, prediction_method)
     else:
-        probable_src_ports = get_guessed_ports(max_predicted_ports, peer_number, probable_port_step, last_src_port)
+        probable_src_ports = get_guessed_ports(max_predicted_ports, peer_number, probable_port_step, last_src_port, prediction_method)
 
     success = src_port_to_peer in probable_src_ports
     return success
 
-def test_success_rate(number_of_runs, num_monitors, port_step, num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer):
+def test_success_rate(number_of_runs, num_monitors, port_step, num_peers,
+        max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer, prediction_method=2):
     successful_runs = 0
     for _ in range(number_of_runs):
-        success = testrun(max_predicted_ports, port_step, num_monitors, num_peers, skip_likeliness_monitor, skip_likeliness_peer)
+        success = testrun(max_predicted_ports, port_step, num_monitors, num_peers, skip_likeliness_monitor, skip_likeliness_peer, prediction_method)
         if success:
             successful_runs += 1
     success_percentage = successful_runs / number_of_runs

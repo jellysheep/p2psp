@@ -77,3 +77,11 @@ set xrange [1:10];
 plot \
     'results5.txt' using 1:2 ls 3 title "1 monitor", \
     'results5.txt' using 1:3 ls 2 title "2 monitors"
+
+set title "1 monitor, 2 peers, avg. 0.5 port skips between monitors, \navg. 4 port skips between peers, 4 guessed source ports"
+set key right top
+set xlabel "Port step"
+set xrange [1:10];
+plot \
+    'results6.txt' using 1:2 ls 3 title "default prediction method", \
+    'results6.txt' using 1:3 ls 2 title "simple prediction method"
