@@ -5,6 +5,7 @@ from math import ceil, floor, log, exp
 from fractions import gcd
 import sys
 from random import random
+from multiprocessing import Pool
 
 def random_skips_number(skip_likeliness):
     return int(floor(-log(random()*0.9999 + 0.0001)*skip_likeliness))
@@ -88,59 +89,3 @@ def avg_skip_number(number_of_runs, skip_likeliness):
     #~ avg_skips /= number_of_runs
     #~ return avg_skips
     return 1/(exp(1/skip_likeliness)-1)
-
-
-number_of_runs = 2000
-
-port_step = 1
-num_peers = 2
-max_number_guessed_ports = 10
-skip_likeliness_monitor = 1
-skip_likeliness_peer = 5
-
-avg_monitor_skips = avg_skip_number(number_of_runs, skip_likeliness_monitor)
-avg_peer_skips = avg_skip_number(number_of_runs, skip_likeliness_peer)
-print("Average number of skips between splitter and monitor: " + str(avg_monitor_skips))
-print("Average number of skips between monitor and peer: " + str(avg_peer_skips))
-
-f = open("results.txt", 'w')
-for max_predicted_ports in range(1, max_number_guessed_ports+1):
-    success_percentage_1_mon = test_success_rate(number_of_runs, 1, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    success_percentage_2_mon = test_success_rate(number_of_runs, 2, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    f.write("{0}\t{1}\t{2}\n".format(max_predicted_ports, success_percentage_1_mon, success_percentage_2_mon))
-f.close()
-max_predicted_ports = 5
-
-f = open("results2.txt", 'w')
-skip_likeliness_monitor = 0.5
-while skip_likeliness_monitor < 20:
-    skip_likeliness_monitor += 1
-    success_percentage_1_mon = test_success_rate(number_of_runs, 1, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    success_percentage_2_mon = test_success_rate(number_of_runs, 2, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    f.write("{0}\t{1}\t{2}\n".format(avg_skip_number(number_of_runs, skip_likeliness_monitor), success_percentage_1_mon, success_percentage_2_mon))
-f.close()
-skip_likeliness_monitor = 1
-
-f = open("results3.txt", 'w')
-skip_likeliness_peer = 0.1
-while skip_likeliness_peer < 20:
-    skip_likeliness_peer += max(0.3, skip_likeliness_peer*0.1)
-    success_percentage_1_mon = test_success_rate(number_of_runs, 1, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    success_percentage_2_mon = test_success_rate(number_of_runs, 2, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    f.write("{0}\t{1}\t{2}\n".format(avg_skip_number(number_of_runs, skip_likeliness_peer), success_percentage_1_mon, success_percentage_2_mon))
-f.close()
-skip_likeliness_peer = 5
-
-f = open("results4.txt", 'w')
-skip_likeliness_monitor = 20
-for num_monitors in range(1, 11):
-    success_percentage = test_success_rate(number_of_runs, num_monitors, port_step,
-            num_peers, max_predicted_ports, skip_likeliness_monitor, skip_likeliness_peer)
-    f.write("{0}\t{1}\n".format(num_monitors, success_percentage))
-f.close()
