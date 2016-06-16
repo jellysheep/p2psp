@@ -73,15 +73,17 @@ set xlabel "Number of monitors"
 set xrange [0:10];
 plot \
     'results4.txt' using 1:2 ls 3 title "port step 1", \
-    'results4.txt' using 1:3 ls 2 title "port step 2"
+    'results4.txt' using 1:3 ls 2 title "port step 2", \
+    'results4.txt' using 1:4 ls 6 title "port step 6"
 
 set title "1 inc. peer, avg. 0.5 port skips between monitors, \navg. 4 port skips between peers, 10 guessed source ports"
 set key right top
 set xlabel "Port step"
 set xrange [1:10];
 plot \
-    'results5.txt' using 1:2 ls 3 title "1 monitor", \
-    'results5.txt' using 1:3 ls 2 title "2 monitors"
+    'results5.txt' using 1:2 ls 6 title "no monitor", \
+    'results5.txt' using 1:3 ls 3 title "1 monitor", \
+    'results5.txt' using 1:4 ls 2 title "2 monitors"
 
 set title "1 monitor, 1 inc. peer, avg. 0.5 port skips between monitors, \navg. 4 port skips between peers, 4 guessed source ports"
 set key right top
