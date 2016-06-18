@@ -6,8 +6,8 @@ number_of_runs = 10000
 
 port_step = 1
 skip_likeliness_monitor = 1
-skip_likeliness_peer = 5
-max_predicted_ports = 10
+skip_likeliness_peer = 3
+max_predicted_ports = 20
 
 f = open("results7.txt", 'w')
 for incorporated_peers in range(1, 11):
